@@ -69,7 +69,8 @@ public class ItemServiceImpl implements ItemService {
             Item item = itemRepository.findById(id)
                     .orElseThrow(() -> new ResourceNotFoundException("Item", "id", id));
 
-            Category category = categoryRepository.findById(id)
+            System.out.println("DEBUG - categoryId diterima: " + itemDto.getCategoryId());
+            Category category = categoryRepository.findById(itemDto.getCategoryId())
                     .orElseThrow(() -> new ResourceNotFoundException("Category", "id", itemDto.getCategoryId()));
             item.setSku(itemDto.getSku());
             item.setNameItem(itemDto.getNameItem());

@@ -1,5 +1,6 @@
 package com.assessment.shop_warehouse_api.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -10,6 +11,7 @@ import java.math.BigDecimal;
 @Data
 public class ItemVariantDto {
     private Long id;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private Long itemId;
 
     @NotBlank(message = "Nama varian wajib diisi")

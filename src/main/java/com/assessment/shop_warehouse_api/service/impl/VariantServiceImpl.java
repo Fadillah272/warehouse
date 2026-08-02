@@ -10,8 +10,11 @@ import com.assessment.shop_warehouse_api.entity.ItemVariant;
 import com.assessment.shop_warehouse_api.repository.ItemRepository;
 import com.assessment.shop_warehouse_api.repository.ItemVariantRepository;
 import com.assessment.shop_warehouse_api.service.VariantService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -68,7 +71,10 @@ public class VariantServiceImpl implements VariantService {
 
             ItemVariant variant = variantRepository.findById(id)
                     .orElseThrow(()-> new ResourceNotFoundException("Variant", "id", id));
+            Item item = itemRepository.findById(dto.getItemId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Item", "id", dto.getItemId()));
             variant.setVariantName(dto.getVariantName());
+            variant.setItem(item);
             variant.setColor(dto.getColor());
             variant.setSize(dto.getSize());
             variant.setBarcode(dto.getBarcode());
@@ -141,6 +147,41 @@ public class VariantServiceImpl implements VariantService {
             return response;
         } catch (Exception ex) {
             throw new InternalServerException("Failed to retrieve deleted variants: " + ex.getMessage(), ex);
+        }
+    }
+
+    @Override
+    public ApiResponse<Page<ItemVariantDto>> getAllItem(String keyword, Pageable pageable){
+        try{
+            ApiResponse<org.springframework.data.domain.Page<ItemVariantDto>> response = new ApiResponse<>();
+            Page<ItemVariant> itemVariants = StringUtils.hasText(keyword)
+                    ? variantRepository.findByIsDeletedFalseAndVariantNameContainingIgnoreCase(keyword, pageable)
+                    : variantRepository.findByIsDeletedFalse(pageable);
+            response.setStatus(true);
+            response.getMessages().add("Variants retrieved successfully");
+            response.setData(itemVariants.map(this::mapToDto));
+            return response;
+        } catch (Exception ex) {
+            throw new InternalServerException("Failed to retrieve items: " + ex.getMessage(), ex);
+        }
+    }
+
+    @Override
+    public ApiResponse<ItemVariantDto> getItemByBarcode(String barcode){
+        try{
+            ApiResponse<ItemVariantDto> response = new ApiResponse<>();
+            ItemVariant itemVariant = variantRepository.findAllByBarcode(barcode).stream()
+                    .findFirst()
+                    .orElseThrow(() -> new ResourceNotFoundException("Variant", "barcode", barcode));
+
+            response.setStatus(true);
+            response.getMessages().add("Variants retrieved successfully");
+            response.setData(mapToDto(itemVariant));
+            return response;
+        } catch (ResourceNotFoundException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new InternalServerException("Failed to retrieve item: " + ex.getMessage(), ex);
         }
     }
 

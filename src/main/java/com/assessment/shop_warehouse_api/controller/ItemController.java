@@ -4,7 +4,9 @@ package com.assessment.shop_warehouse_api.controller;
 import com.assessment.shop_warehouse_api.common.response.ApiResponse;
 import com.assessment.shop_warehouse_api.dto.ItemDto;
 import com.assessment.shop_warehouse_api.service.ItemService;
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -42,10 +44,10 @@ public class ItemController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<ItemDto>>> getAllItem(
-            @RequestParam(required = false) String keyboard,
-            Pageable pageable
-    ){
-        return ResponseEntity.ok(itemService.getAllItem(keyboard, pageable));
+            @Parameter(description = "Search keyword to filter by item name (optional)")
+            @RequestParam(required = false) String keyword,
+            @ParameterObject Pageable pageable) {
+        return ResponseEntity.ok(itemService.getAllItem(keyword, pageable));
     }
 
     @GetMapping("/deleted")
