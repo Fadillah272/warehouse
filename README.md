@@ -189,6 +189,43 @@ All responses follow this envelope:
 }
 ```
 
+**Read-only fields:** some fields in the response (`id`, `categoryName`, `deleted`) are computed by the server and should **not** be sent in request bodies — they're ignored if present. Only send the fields actually needed to create/update a resource (e.g. `categoryId` when creating an Item, not `categoryName`).
+
+**Common error responses** (same envelope, `status: false`):
+| HTTP Status | When it happens |
+|---|---|
+| 400 Bad Request | Validation failed (missing/invalid field) or business rule violated (e.g. insufficient stock) |
+| 404 Not Found | Referenced resource doesn't exist (e.g. unknown `categoryId`) |
+| 409 Conflict | Duplicate unique field (SKU/barcode) or concurrent stock update conflict |
+| 500 Internal Server Error | Unexpected error (database issue, etc.) |
+
+Example — validation error:
+```json
+{
+  "status": false,
+  "messages": ["nameCategory: Nama kategori wajib diisi"],
+  "data": null
+}
+```
+
+Example — duplicate resource:
+```json
+{
+  "status": false,
+  "messages": ["SKU already exists: SKU-001"],
+  "data": null
+}
+```
+
+Example — concurrent stock update conflict (optimistic locking):
+```json
+{
+  "status": false,
+  "messages": ["Data sedang diproses oleh transaksi lain, silakan coba lagi"],
+  "data": null
+}
+```
+
 ### Category
 Groups items into broader classifications (e.g. Shoes, Apparel, Accessories). Every Item must belong to exactly one Category.
 
@@ -200,6 +237,30 @@ Groups items into broader classifications (e.g. Shoes, Apparel, Accessories). Ev
 | GET    | `/categories`                  | Get all active categories       |
 | GET    | `/categories/deleted`          | Get all soft-deleted categories |
 | GET    | `/categories/{id}`             | Get a category by ID            |
+
+**Example — Create Category**
+```
+POST /api/categories
+```
+```json
+{
+  "nameCategory": "Sepatu",
+  "description": "Sepatu casual dan olahraga"
+}
+```
+Success:
+```json
+{
+  "status": true,
+  "messages": ["Category created successfully"],
+  "data": {
+    "id": 1,
+    "nameCategory": "Sepatu",
+    "description": "Sepatu casual dan olahraga",
+    "deleted": false
+  }
+}
+```
 
 ### Item
 Represents a general product the shop sells (e.g. "Nike Air Max"). An Item itself has no price or stock — those live on its Variants. Use this when you need to manage the product catalog itself (name, SKU, description, category).
@@ -223,6 +284,41 @@ A specific sellable version of an Item — e.g. "Nike Air Max, Black, Size 42". 
 | DELETE | `/variants/{id}`                         | Soft-delete a variant             |
 | GET    | `/items/{itemId}/variants`                | Get all active variants of an item |
 | GET    | `/variants/deleted`                      | Get all soft-deleted variants       |
+| GET    | `/variants?keyword=&page=&size=&sort=`   | Get all active variants (paginated, searchable by variant name) |
+| GET    | `/variant/barcode/{barcode}`             | Get a variant by its barcode (used for barcode scanner lookups) |
+
+**Example — Create Variant**
+```
+POST /api/items/1/variants
+```
+```json
+{
+  "variantName": "Black Size 42",
+  "color": "Black",
+  "size": "42",
+  "barcode": "899111111111",
+  "price": 1250000,
+  "stock": 15
+}
+```
+Success:
+```json
+{
+  "status": true,
+  "messages": ["Variant created successfully"],
+  "data": {
+    "id": 1,
+    "itemId": 1,
+    "variantName": "Black Size 42",
+    "color": "Black",
+    "size": "42",
+    "barcode": "899111111111",
+    "price": 1250000,
+    "stock": 15,
+    "deleted": false
+  }
+}
+```
 
 ### Stock
 Read and adjust the current stock level of any variant directly — useful for restocking, correcting counts, or spotting variants that are running low. Every adjustment here is logged as a `StockMovement` for audit purposes (see the ERD above).
@@ -298,6 +394,8 @@ cd shop-warehouse-api
 ```
 
 ### 2. Run the application
+
+**Option A — Command line**
 ```bash
 ./mvnw spring-boot:run
 ```
@@ -305,6 +403,12 @@ or, if you have Maven installed globally:
 ```bash
 mvn spring-boot:run
 ```
+
+**Option B — IntelliJ IDEA**
+1. Open the project folder (`File > Open...`), select the folder containing `pom.xml`
+2. Let IntelliJ auto-import the Maven dependencies (bottom-right notification, or `Reload All Maven Projects` in the Maven tool window)
+3. Locate `ShopWarehouseApiApplication.java` (`src/main/java/com/assessment/shop_warehouse_api/`)
+4. Click the green **Run** ▶ button next to the `main` method, or right-click the file → **Run 'ShopWarehouseApiApplication'**
 
 The app starts on **`http://localhost:8081`** by default.
 
@@ -332,6 +436,25 @@ spring.datasource.password=yourpassword
 spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
 ```
 Make sure the `warehouse` database already exists (`CREATE DATABASE warehouse;`) before starting the app.
+
+---
+
+## Troubleshooting
+
+**H2 Console shows "Database not found" error**
+Make sure you're using the H2 Console **built into the running Spring Boot app** (`http://localhost:8081/h2-console`), not a standalone H2 application — the in-memory database only exists inside the app's own JVM process while it's running. Also double-check the **JDBC URL field on the login page** matches `application.properties` exactly: `jdbc:h2:mem:warehouse`.
+
+**Pagination (`sort`) shows as a raw JSON box in Swagger instead of separate fields**
+Add this property so springdoc renders `Pageable` as separate `page` / `size` / `sort` query fields:
+```properties
+springdoc.model-converters.pageable-converter.enabled=true
+```
+
+**`PropertyReferenceException: No property 'x' found for type 'Y'`**
+This means the `sort` value you passed doesn't match an actual field name on that entity. For example, `/api/variants?sort=nameItem,asc` fails because `nameItem` belongs to `Item`, not `ItemVariant` — use `sort=variantName,asc` instead (or `sort=item.nameItem,asc` to sort by the parent Item's name via the relation).
+
+**PostgreSQL: `password authentication failed`**
+This is a local database credential/config issue, unrelated to the app code. Verify you can log in manually (`psql -U postgres -h localhost`), that the `warehouse` database exists, and that `pg_hba.conf` allows password auth for local connections. If in doubt, just use the default H2 in-memory setup — no external database needed.
 
 ---
 
