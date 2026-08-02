@@ -190,6 +190,8 @@ All responses follow this envelope:
 ```
 
 ### Category
+Groups items into broader classifications (e.g. Shoes, Apparel, Accessories). Every Item must belong to exactly one Category.
+
 | Method | Endpoint                     | Description                    |
 |--------|-------------------------------|--------------------------------|
 | POST   | `/categories`                 | Create a category              |
@@ -200,6 +202,8 @@ All responses follow this envelope:
 | GET    | `/categories/{id}`             | Get a category by ID            |
 
 ### Item
+Represents a general product the shop sells (e.g. "Nike Air Max"). An Item itself has no price or stock — those live on its Variants. Use this when you need to manage the product catalog itself (name, SKU, description, category).
+
 | Method | Endpoint                                 | Description                              |
 |--------|--------------------------------------------|-------------------------------------------|
 | POST   | `/items`                                    | Create an item                             |
@@ -210,6 +214,8 @@ All responses follow this envelope:
 | GET    | `/items/{id}`                               | Get an item by ID                           |
 
 ### Item Variant
+A specific sellable version of an Item — e.g. "Nike Air Max, Black, Size 42". This is where **price**, **stock**, and **barcode** actually live, since the same Item can have many combinations of color/size, each priced and stocked separately.
+
 | Method | Endpoint                              | Description                     |
 |--------|-----------------------------------------|----------------------------------|
 | POST   | `/items/{itemId}/variants`               | Create a variant for an item      |
@@ -219,6 +225,8 @@ All responses follow this envelope:
 | GET    | `/variants/deleted`                      | Get all soft-deleted variants       |
 
 ### Stock
+Read and adjust the current stock level of any variant directly — useful for restocking, correcting counts, or spotting variants that are running low. Every adjustment here is logged as a `StockMovement` for audit purposes (see the ERD above).
+
 | Method | Endpoint             | Description                              |
 |--------|-----------------------|--------------------------------------------|
 | GET    | `/stocks`             | Get current stock for all active variants   |
@@ -226,6 +234,8 @@ All responses follow this envelope:
 | POST   | `/stocks/adjustment`  | Manually adjust stock (in/out) with an audit trail |
 
 ### Sales
+Records a customer transaction. Creating a sale automatically validates stock availability, deducts stock from each variant sold, calculates the total, and generates an invoice number — all in a single atomic operation. If any item in the request doesn't have enough stock, the **entire sale is rejected** (no partial sales).
+
 | Method | Endpoint         | Description                                             |
 |--------|-------------------|-----------------------------------------------------------|
 | POST   | `/sales`           | Create a sale (validates & deducts stock, blocks if insufficient) |
@@ -266,6 +276,8 @@ Error (insufficient stock):
 ```
 
 ### Dashboard
+A quick, read-only overview of the warehouse's current state — handy for a landing page or admin summary widget.
+
 | Method | Endpoint      | Description                                              |
 |--------|----------------|-------------------------------------------------------------|
 | GET    | `/dashboard`   | Summary: total items, total variants, low stock count, today's sales |
