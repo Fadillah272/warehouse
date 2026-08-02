@@ -389,8 +389,8 @@ A quick, read-only overview of the warehouse's current state — handy for a lan
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/shop-warehouse-api.git
-cd shop-warehouse-api
+https://github.com/Fadillah272/warehouse.git
+cd warehouse
 ```
 
 ### 2. Run the application
